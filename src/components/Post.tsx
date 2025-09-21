@@ -7,13 +7,16 @@ interface PostProps {
   user: User;
   onLike: (postId: string) => void;
   onTagClick: (tag: string) => void;
+  onDelete: () => void;
 }
 
-export default function Post({ post, user, onLike, onTagClick }: PostProps) {
+export default function Post({ post, user, onLike, onTagClick, onDelete }: PostProps) {
   const [isLiked, setIsLiked] = useState(post.liked);
   const [likes, setLikes] = useState(post.likes);
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState(post.commentsList || []);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
 
   const handleLike = () => {
     setIsLiked(!isLiked);
@@ -41,6 +44,19 @@ export default function Post({ post, user, onLike, onTagClick }: PostProps) {
     };
     setComments([...comments, newComment]);
     setCommentText("");
+  };
+
+  const handleEditComment = (commentId: string, content: string) => {
+    setEditingCommentId(commentId);
+    setEditingCommentText(content);
+  };
+  const handleSaveEditComment = (commentId: string) => {
+    setComments(comments.map((comment: any) => comment.id === commentId ? { ...comment, content: editingCommentText } : comment));
+    setEditingCommentId(null);
+    setEditingCommentText("");
+  };
+  const handleDeleteComment = (commentId: string) => {
+    setComments(comments.filter((comment: any) => comment.id !== commentId));
   };
 
   return (
@@ -120,9 +136,12 @@ export default function Post({ post, user, onLike, onTagClick }: PostProps) {
               <span className="text-sm font-medium">{formatCount(post.shares)}</span>
             </button>
           </div>
-          <button className="text-gray-500 hover:text-gray-700 transition-colors group">
-            <Bookmark className="h-5 w-5 group-hover:scale-110 transition-transform" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="text-gray-500 hover:text-gray-700 transition-colors group">
+              <Bookmark className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            </button>
+            <button onClick={onDelete} className="text-red-500 hover:text-red-600 transition-colors group text-xs px-2 py-1 rounded bg-red-50 ml-2">Delete</button>
+          </div>
         </div>
       </div>
       {/* Comments Section */}
@@ -134,10 +153,27 @@ export default function Post({ post, user, onLike, onTagClick }: PostProps) {
             {comments.filter(comment => comment && comment.user && comment.user.avatar).map((comment: any) => (
               <li key={comment.id} className="flex items-start space-x-2">
                 <img src={comment.user.avatar} alt={comment.user.fullName} className="w-7 h-7 rounded-full border border-[#e4e6eb] mt-1" />
-                <div>
+                <div className="flex-1">
                   <span className="font-medium text-xs text-gray-800">{comment.user.fullName}</span>
                   <span className="text-xs text-gray-400 ml-2">{comment.timestamp}</span>
-                  <p className="text-xs text-gray-700 mt-1">{comment.content}</p>
+                  {editingCommentId === comment.id ? (
+                    <div className="flex items-center mt-1 space-x-2">
+                      <input
+                        type="text"
+                        className="flex-1 border border-[#e4e6eb] rounded px-2 py-1 text-xs"
+                        value={editingCommentText}
+                        onChange={e => setEditingCommentText(e.target.value)}
+                      />
+                      <button onClick={() => handleSaveEditComment(comment.id)} className="text-blue-500 text-xs">Save</button>
+                      <button onClick={() => setEditingCommentId(null)} className="text-gray-400 text-xs">Cancel</button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-700 mt-1">{comment.content}</p>
+                  )}
+                </div>
+                <div className="flex flex-col space-y-1 ml-2">
+                  <button onClick={() => handleEditComment(comment.id, comment.content)} className="text-xs text-blue-400 hover:underline">Edit</button>
+                  <button onClick={() => handleDeleteComment(comment.id)} className="text-xs text-red-400 hover:underline">Delete</button>
                 </div>
               </li>
             ))}
